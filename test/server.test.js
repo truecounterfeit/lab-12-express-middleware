@@ -1,60 +1,65 @@
 'use strict';
 
-const Note = require('../lib/note.js');
-const app = require('../lib/routes.js');
 const request = require('superagent');
 const expect = require('expect');
 const server = app.listen(3000);
+const Storage = require('../lib/storage.js');
 
-describe('Testing for GET', () => {
-
-  it('should send an error if note is not found', (done) => {
-    request.get('localhost:3000/api/notes/123').end(function(err, res) {
-      expect(res.text).toEqual('Note not found');
-      done();
-    });
-  });
-  it('should send the note when correct id is presented', (done) => {
-    request.get('localhost:3000/api/notes/David').end(function(err, res) {
-      expect(res.text).toEqual('sucks');
-      done();
-    });
-  });
-  it('should send an error if you do not send an id', (done) => {
-    request.get('localhost:3000/api/notes/').end(function(err, res) {
-      expect(res.text).toEqual('You did not send an id');
+describe('POST Testing our storage, creating a new note', () => {
+  it('Should correctly send contents to new file', done => {
+    request.post('localhost:/3000', {contents: 'Hello Kelati'}, (err, res) => {
+      
       done();
     });
   });
 
+  it('Should throw an error if we do not send contents', done => {
+    request.post('localhost:/3000', {}, (err, res), => {
+
+      done();
+    });
+  });
 });
 
+describe('PUT/PATCH Testing', done => {
+  // hello Kelati should be the only note we created so far
+    const ID = Storage.fetchIds();
 
-describe('Testing for POST', () => {
-  after((done) => {
+    it('Should update the note we made earlier', done => {
+      request.patch(`localhost:3000/${ID[0]}`.send({contents: 'Not Hello Kelati Anynore'}).end((err, res) => {
+        expect(res.text).toEqual(`Note Updated. New body of note ${ID}: Note Hello Kelati Anymore`);
+        done();
+      }));
+    });
+
+    it('Should return error if ID is incorrect', done => {
+      request.patch(`localhost:3000/233224`).send({}).end((err, res) => {
+        expect(res.text).toEqual('Note Not Found');
+        done();
+      });
+    });
+    
+});
+
+describe('GET Testing', done => {
+  after(done => {
     server.close();
     done();
-  });
+  })
 
-  it('should create a note when body content is passed like body=content', (done) => {
-    request.post('localhost:3000/api/notes', { body: 'hello' }, function(err, res) {
-      expect(res.text).toEqual('Note created');
+  const ID = Storage.fetchIds();  
+  it('Should return one note based upon ID', done => {
+    request.get(`localhost:3000/${ID[0]}`).end((res, err) => {
+      expect(res.text).toEqual();
+      done();
+    });
+  })
+
+  it('Should return a list of all notes, in this case 2 of them', done => {
+    Storage.createNote({content: 'Hello Larry'});
+    request.get('localhost:3000').end((res, end) => {
+      expect().toEqual();
       done();
     });
   });
-
-  it('should asked user to include body content if none was provided', (done) => {
-    request.post('localhost:3000/api/notes', { body: '' }, function(err, res) {
-      expect(res.text).toEqual("Please submit content alongside body=");
-      done();
-    });
-  });
-
-  it('should tell user to actuall post something if they do not', (done) => {
-    request.post('localhost:3000/api/notes', {}, function(err, res) {
-      expect(res.text).toEqual('You did not post a body in your request. Please submit as \"body=\"');
-      done();
-    });
-  });
-
 });
